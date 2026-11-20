@@ -1,3 +1,37 @@
+import os, re, json, pathlib
+
+def getenv_str(name: str, default: str = "") -> str:
+v = os.getenv(name, default)
+if v is None:
+v = default
+return str(v).strip()
+
+def _to_int_safe(s: str, default: int = 0) -> int:
+# чистим "ID: -100..." и посторонние символы, оставляем только цифры/минус
+cleaned = re.sub(r"[^\d-]", "", s or "")
+try:
+return int(cleaned) if cleaned else int(default)
+except ValueError:
+return int(default)
+
+def getenv_int(name: str, default: int = 0) -> int:
+return _to_int_safe(getenv_str(name, str(default)), default)
+
+def getenv_ids_list(name: str):
+raw = getenv_str(name, "")
+if not raw:
+return []
+parts = re.split(r"[,\s]+", raw)
+out = []
+for p in parts:
+p = re.sub(r"[^\d-]", "", p)
+if not p:
+continue
+try:
+out.append(int(p))
+except ValueError:
+pass
+return out
 #!/usr/bin/env python3
 import os
 import json
