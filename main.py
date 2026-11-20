@@ -1,37 +1,51 @@
 import os, re, json, pathlib
 
 def getenv_str(name: str, default: str = "") -> str:
-v = os.getenv(name, default)
-if v is None:
-v = default
-return str(v).strip()
+    v = os.getenv(name, default)
+    return ("" if v is None else str(v)).strip()
 
 def _to_int_safe(s: str, default: int = 0) -> int:
-# чистим "ID: -100..." и посторонние символы, оставляем только цифры/минус
-cleaned = re.sub(r"[^\d-]", "", s or "")
-try:
-return int(cleaned) if cleaned else int(default)
-except ValueError:
-return int(default)
+    # чистим "ID: -100..." и любые лишние символы, оставляем цифры/минус
+    cleaned = re.sub(r"[^\d\-]", "", s or "")
+    try:
+        return int(cleaned) if cleaned else int(default)
+    except ValueError:
+        return int(default)
 
 def getenv_int(name: str, default: int = 0) -> int:
-return _to_int_safe(getenv_str(name, str(default)), default)
+    return _to_int_safe(getenv_str(name, str(default)), default)
 
 def getenv_ids_list(name: str):
-raw = getenv_str(name, "")
-if not raw:
-return []
-parts = re.split(r"[,\s]+", raw)
-out = []
-for p in parts:
-p = re.sub(r"[^\d-]", "", p)
-if not p:
-continue
-try:
-out.append(int(p))
-except ValueError:
-pass
-return out
+    raw = getenv_str(name, "")
+    if not raw:
+        return []
+    parts = re.split(r"[,\s]+", raw)
+    out = []
+    for p in parts:
+        p = re.sub(r"[^\d\-]", "", p)
+        if not p:
+            continue
+        try: out.append(int(p))
+        except ValueError: pass
+    return out
+
+# ENV
+TG_BOT_TOKEN   = getenv_str("TG_BOT_TOKEN")
+TG_CHANNEL_ID  = getenv_int("TG_CHANNEL_ID", 0)
+ADMIN_CHAT_ID  = getenv_int("ADMIN_CHAT_ID", 0)
+ADMIN_USER_IDS = getenv_ids_list("ADMIN_USER_IDS")
+TIMEZONE       = getenv_str("TIMEZONE", "Europe/Moscow")
+OPENAI_API_KEY = getenv_str("OPENAI_API_KEY", "")
+
+if not TG_BOT_TOKEN:
+    raise SystemExit("TG_BOT_TOKEN is empty. Set it in Railway → Variables")
+
+# гарантируем data/queue.json
+DATA_DIR = pathlib.Path(__file__).resolve().parent / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+QUEUE_FILE = DATA_DIR / "queue.json"
+if not QUEUE_FILE.exists():
+    QUEUE_FILE.write_text("[]", encoding="utf-8")
 #!/usr/bin/env python3
 import os
 import json
